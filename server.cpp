@@ -128,7 +128,9 @@ int main(int argc, char *argv[])
 
                         // save new descriptor to further use
 			clients_list.push_back(client); // add new connection to list of clients
-			if(DEBUG_MODE) printf("Add new client(fd = %d) to epoll and now clients_list.size = %d\n", client, clients_list.size());
+			if(DEBUG_MODE) printf("Add new client(fd = %d) to epoll and now clients_list.size = %d\n", 
+                                                 client, 
+                                                 clients_list.size());
 
                         // send initial welcome message to client
                         bzero(message, BUF_SIZE);
