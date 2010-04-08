@@ -11,146 +11,146 @@ int DEBUG_MODE = 0;
 
 int main(int argc, char *argv[])
 {
-    // *** Define debug mode
-    //     any additional parameres on startup
-    //     i.e. like './server f' or './server debug'
-    //     we will switch to switch to debug mode(very simple anmd useful)
-    if(argc > 1) DEBUG_MODE = 1;
-    
-    if(DEBUG_MODE){
-        printf("Debug mode is ON!\n");
-        printf("MAIN: argc = %d\n", argc);
-        for(int i=0; i<argc; i++)
-            printf(" argv[%d] = %s\n", i, argv[i]);
-    }else printf("Debug mode is OFF!\n");
+	// *** Define debug mode
+	//     any additional parameres on startup
+	//     i.e. like './server f' or './server debug'
+	//     we will switch to switch to debug mode(very simple anmd useful)
+	if(argc > 1) DEBUG_MODE = 1;
 
-    // *** Define values
-    //     main server listener 
-    int listener;
-    
-    // define ip & ports for server(addr)
-    //     and incoming client ip & ports(their_addr)
-    struct sockaddr_in addr, their_addr;
-    //     configure ip & port for listen
-    addr.sin_family = PF_INET;
-    addr.sin_port = htons(SERVER_PORT);
-    addr.sin_addr.s_addr = inet_addr(SERVER_HOST);
+	if(DEBUG_MODE){
+		printf("Debug mode is ON!\n");
+		printf("MAIN: argc = %d\n", argc);
+		for(int i=0; i<argc; i++)
+			printf(" argv[%d] = %s\n", i, argv[i]);
+	}else printf("Debug mode is OFF!\n");
 
-    //     size of address
-    socklen_t socklen;
-    socklen = sizeof(struct sockaddr_in);
+	// *** Define values
+	//     main server listener 
+	int listener;
 
-    //     event template for epoll_ctl(ev)
-    //     storage array for incoming events from epoll_wait(events)
-    //        and maximum events count could be EPOLL_SIZE
-    static struct epoll_event ev, events[EPOLL_SIZE];
-    //     watch just incoming(EPOLLIN) 
-    //     and Edge Trigged(EPOLLET) events
-    ev.events = EPOLLIN | EPOLLET;
+	// define ip & ports for server(addr)
+	//     and incoming client ip & ports(their_addr)
+	struct sockaddr_in addr, their_addr;
+	//     configure ip & port for listen
+	addr.sin_family = PF_INET;
+	addr.sin_port = htons(SERVER_PORT);
+	addr.sin_addr.s_addr = inet_addr(SERVER_HOST);
 
-    //     chat message buffer
-    char message[BUF_SIZE];
+	//     size of address
+	socklen_t socklen;
+	socklen = sizeof(struct sockaddr_in);
 
-    //     epoll descriptor to watch events
-    int epfd;
+	//     event template for epoll_ctl(ev)
+	//     storage array for incoming events from epoll_wait(events)
+	//        and maximum events count could be EPOLL_SIZE
+	static struct epoll_event ev, events[EPOLL_SIZE];
+	//     watch just incoming(EPOLLIN) 
+	//     and Edge Trigged(EPOLLET) events
+	ev.events = EPOLLIN | EPOLLET;
 
-    //     to calculate the execution time of a program
-    clock_t tStart;
+	//     chat message buffer
+	char message[BUF_SIZE];
 
-    // other values:
-    //     new client descriptor(client)
-    //     to keep the results of different functions(res)
-    //     to keep incoming epoll_wait's events count(epoll_events_count)
-    int client, res, epoll_events_count;
+	//     epoll descriptor to watch events
+	int epfd;
+
+	//     to calculate the execution time of a program
+	clock_t tStart;
+
+	// other values:
+	//     new client descriptor(client)
+	//     to keep the results of different functions(res)
+	//     to keep incoming epoll_wait's events count(epoll_events_count)
+	int client, res, epoll_events_count;
 
 
-    // *** Setup server listener
-    //     create listener with PF_INET(IPv4) and 
-    //     SOCK_STREAM(sequenced, reliable, two-way, connection-based byte stream)
-    CHK2(listener, socket(PF_INET, SOCK_STREAM, 0));
-    printf("Main listener(fd=%d) created! \n",listener);
+	// *** Setup server listener
+	//     create listener with PF_INET(IPv4) and 
+	//     SOCK_STREAM(sequenced, reliable, two-way, connection-based byte stream)
+	CHK2(listener, socket(PF_INET, SOCK_STREAM, 0));
+	printf("Main listener(fd=%d) created! \n",listener);
 
-    //    setup nonblocking socket
-    setnonblocking(listener);
+	//    setup nonblocking socket
+	setnonblocking(listener);
 
-    //    bind listener to address(addr)
-    CHK(bind(listener, (struct sockaddr *)&addr, sizeof(addr)));
-    printf("Listener binded to: %s\n", SERVER_HOST);
+	//    bind listener to address(addr)
+	CHK(bind(listener, (struct sockaddr *)&addr, sizeof(addr)));
+	printf("Listener binded to: %s\n", SERVER_HOST);
 
-    //    start to listen connections
-    CHK(listen(listener, 1));
-    printf("Start to listen: %s!\n", SERVER_HOST);
+	//    start to listen connections
+	CHK(listen(listener, 1));
+	printf("Start to listen: %s!\n", SERVER_HOST);
 
-    // *** Setup epoll
-    //     create epoll descriptor 
-    //     and backup store for EPOLL_SIZE of socket events
-    CHK2(epfd,epoll_create(EPOLL_SIZE));
-    printf("Epoll(fd=%d) created!\n", epfd);
-    
-    //     set listener to event template 
-    ev.data.fd = listener;
+	// *** Setup epoll
+	//     create epoll descriptor 
+	//     and backup store for EPOLL_SIZE of socket events
+	CHK2(epfd,epoll_create(EPOLL_SIZE));
+	printf("Epoll(fd=%d) created!\n", epfd);
 
-    //     add listener to epoll
-    CHK(epoll_ctl(epfd, EPOLL_CTL_ADD, listener, &ev));
-    printf("Main listener(%d) added to epoll!\n", epfd);
+	//     set listener to event template 
+	ev.data.fd = listener;
 
-    // *** Main cycle(epoll_wait)
-    while(1)
-    {
-	CHK2(epoll_events_count,epoll_wait(epfd, events, EPOLL_SIZE, EPOLL_RUN_TIMEOUT));
-	if(DEBUG_MODE) printf("Epoll events count: %d\n", epoll_events_count);
-        // setup tStart time
-        tStart = clock();
+	//     add listener to epoll
+	CHK(epoll_ctl(epfd, EPOLL_CTL_ADD, listener, &ev));
+	printf("Main listener(%d) added to epoll!\n", epfd);
 
-	for(int i = 0; i < epoll_events_count ; i++)
+	// *** Main cycle(epoll_wait)
+	while(1)
 	{
-		if(DEBUG_MODE){
-			printf("events[%d].data.fd = %d\n", i, events[i].data.fd); 
-                        debug_epoll_event(events[i]);
- 
-		}
-                // EPOLLIN event for listener(new client connection)
-		if(events[i].data.fd == listener)
+		CHK2(epoll_events_count,epoll_wait(epfd, events, EPOLL_SIZE, EPOLL_RUN_TIMEOUT));
+		if(DEBUG_MODE) printf("Epoll events count: %d\n", epoll_events_count);
+		// setup tStart time
+		tStart = clock();
+
+		for(int i = 0; i < epoll_events_count ; i++)
 		{
-			CHK2(client,accept(listener, (struct sockaddr *) &their_addr, &socklen));
-	                if(DEBUG_MODE) printf("connection from:%s:%d, socket assigned to:%d \n", 
-				          inet_ntoa(their_addr.sin_addr), 
-				          ntohs(their_addr.sin_port), 
-                                          client);
-                        // setup nonblocking socket
-			setnonblocking(client);
+			if(DEBUG_MODE){
+				printf("events[%d].data.fd = %d\n", i, events[i].data.fd); 
+				debug_epoll_event(events[i]);
 
-                        // set new client to event template
-			ev.data.fd = client;
+			}
+			// EPOLLIN event for listener(new client connection)
+			if(events[i].data.fd == listener)
+			{
+				CHK2(client,accept(listener, (struct sockaddr *) &their_addr, &socklen));
+				if(DEBUG_MODE) printf("connection from:%s:%d, socket assigned to:%d \n", 
+						inet_ntoa(their_addr.sin_addr), 
+						ntohs(their_addr.sin_port), 
+						client);
+				// setup nonblocking socket
+				setnonblocking(client);
 
-                        // add new client to epoll
-			CHK(epoll_ctl(epfd, EPOLL_CTL_ADD, client, &ev));
+				// set new client to event template
+				ev.data.fd = client;
 
-                        // save new descriptor to further use
-			clients_list.push_back(client); // add new connection to list of clients
-			if(DEBUG_MODE) printf("Add new client(fd = %d) to epoll and now clients_list.size = %d\n", 
-                                                 client, 
-                                                 clients_list.size());
+				// add new client to epoll
+				CHK(epoll_ctl(epfd, EPOLL_CTL_ADD, client, &ev));
 
-                        // send initial welcome message to client
-                        bzero(message, BUF_SIZE);
-                        res = sprintf(message, STR_WELCOME, client);
-                        CHK2(res, send(client, message, BUF_SIZE, 0));
+				// save new descriptor to further use
+				clients_list.push_back(client); // add new connection to list of clients
+				if(DEBUG_MODE) printf("Add new client(fd = %d) to epoll and now clients_list.size = %d\n", 
+						client, 
+						clients_list.size());
 
-		}else { // EPOLLIN event for others(new incoming message from client)
-			CHK2(res,handle_message(events[i].data.fd));
+				// send initial welcome message to client
+				bzero(message, BUF_SIZE);
+				res = sprintf(message, STR_WELCOME, client);
+				CHK2(res, send(client, message, BUF_SIZE, 0));
+
+			}else { // EPOLLIN event for others(new incoming message from client)
+				CHK2(res,handle_message(events[i].data.fd));
+			}
 		}
+		// print epoll events handling statistics
+		printf("Statistics: %d events handled at: %.2f second(s)\n", 
+				epoll_events_count, 
+				(double)(clock() - tStart)/CLOCKS_PER_SEC);
 	}
-        // print epoll events handling statistics
-        printf("Statistics: %d events handled at: %.2f second(s)\n", 
-                                        epoll_events_count, 
-                                        (double)(clock() - tStart)/CLOCKS_PER_SEC);
-    }
 
-    close(listener);
-    close(epfd);
+	close(listener);
+	close(epfd);
 
-    return 0;
+	return 0;
 }
 
 // *** Handle incoming message from clients
