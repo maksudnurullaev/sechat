@@ -18,10 +18,8 @@ int DEBUG_MODE = 0;
 
     Parent process:
     - wating for incoming messages(EPOLLIN):
-      - from server(socket);
-        - to display;
-      - from child process(pipe);
-        - to send further to server(socket)
+      - from server(socket) to display;
+      - from child process(pipe) to transmit to server(socket)
       
 */
 
