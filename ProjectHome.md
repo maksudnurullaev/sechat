@@ -1,0 +1,1 @@
+Project explains how to use Linux epoll to create simple chat server to serve thousands of client connections.
